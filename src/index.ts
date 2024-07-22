@@ -103,8 +103,10 @@ async function drawSignText(
 
 async function work() {
   // contributing.pdf is the file that is going to be signed
+  // SOURCE PDF FILE
   const pdfBuffer = await fsPromises.readFile(`curitiba-template.pdf`);
   // certificate.p12 is the certificate that is going to be used to sign
+  // CERTIFICATE FILE
   const certificateBuffer = await fsPromises.readFile(`certificate.p12`);
   const signer = new P12Signer(certificateBuffer, { passphrase: "123456" });
 
@@ -133,10 +135,11 @@ async function work() {
 
   await verifyPdfSignatures(signedPdf, {
     file: certificateBuffer,
-    password: "123456",
+    password: "123456", // CERTIFICATE PASSWORD
   });
 
   // // signedPdf is a Buffer of an electronically signed PDF. Store it.
+  /* SIGNED PDF FILE */
   const targetPath = `${__dirname}/../signed-pgrs.pdf`;
   await fsPromises.writeFile(targetPath, signedPdf);
 }
