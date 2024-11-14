@@ -5,8 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "nodemon src/pdf-index.ts",
-    "build": "tsc -p ."
+    "dev": "nodemon src/index.ts",
+    "build": "tsc -p .",
+    "test": "jest --watch"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +17,7 @@
     "@types/express": "^4.17.21",
     "body-parser": "^1.20.2",
     "express": "^4.19.2",
+    "jest": "^29.7.0",
     "nodemon": "^3.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
