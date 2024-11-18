@@ -21,6 +21,7 @@ jobs:
 
           if [[ "$response" -ge 200 && "$response" -lt 300 ]]; then
             echo "Successfully triggered workflow."
+            sleep 10
           else
             echo "Failed to trigger workflow with status: $response"
             exit 1
