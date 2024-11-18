@@ -17,3 +17,10 @@ jobs:
           -H "Authorization: token $PERSONAL_ACCESS_TOKEN" \
           https://api.github.com/repos/angelomarquesdavinci/release-it-test/dispatches \
           -d '{"event_type": "trigger-from-other-repo"}'
+
+          if [[ "$response" -ge 200 && "$response" -lt 300 ]]; then
+            echo "Request succeeded with status: $response"
+          else
+            echo "Request failed with status: $response"
+            exit 1
+          fi
