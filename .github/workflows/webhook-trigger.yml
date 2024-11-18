@@ -5,11 +5,65 @@ on:
     branches: [main] # or whichever branch should trigger the workflow
 
 jobs:
-  call-reusable-workflow:
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-    uses: angelomarquesdavinci/release-it-test/.github/workflows/reusable.yml@main
-    with:
-      branch: main
+  trigger-and-wait:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger workflow in another repository
+        id: trigger
+        env:
+          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          response=$(curl -s -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token $PERSONAL_ACCESS_TOKEN" \
+            https://api.github.com/repos/target-owner/target-repo/dispatches \
+            -d '{"event_type": "trigger-from-other-repo"}')
+
+          if [[ "$response" -ge 200 && "$response" -lt 300 ]]; then
+            echo "Successfully triggered workflow."
+          else
+            echo "Failed to trigger workflow with status: $response"
+            exit 1
+          fi
+
+      - name: Get latest workflow run ID
+        id: get-run
+        env:
+          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          run_id=$(curl -s -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token $PERSONAL_ACCESS_TOKEN" \
+            "https://api.github.com/repos/target-owner/target-repo/actions/runs?event=repository_dispatch&per_page=1" \
+            | jq -r '.workflow_runs[0].id')
+
+          echo "Run ID: $run_id"
+          echo "run_id=$run_id" >> $GITHUB_ENV
+
+      - name: Wait for workflow completion
+        env:
+          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          while true; do
+            status=$(curl -s -H "Accept: application/vnd.github.v3+json" \
+              -H "Authorization: token $PERSONAL_ACCESS_TOKEN" \
+              "https://api.github.com/repos/target-owner/target-repo/actions/runs/$run_id" \
+              | jq -r '.status')
+
+            conclusion=$(curl -s -H "Accept: application/vnd.github.v3+json" \
+              -H "Authorization: token $PERSONAL_ACCESS_TOKEN" \
+              "https://api.github.com/repos/target-owner/target-repo/actions/runs/$run_id" \
+              | jq -r '.conclusion')
+
+            if [[ "$status" == "completed" ]]; then
+              if [[ "$conclusion" == "success" ]]; then
+                echo "Workflow completed successfully."
+                break
+              else
+                echo "Workflow failed with conclusion: $conclusion"
+                exit 1
+              fi
+            else
+              echo "Workflow still running..."
+              sleep 10
+            fi
+          done
