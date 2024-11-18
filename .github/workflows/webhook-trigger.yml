@@ -6,6 +6,10 @@ on:
 
 jobs:
   call-reusable-workflow:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     uses: angelomarquesdavinci/release-it-test/.github/workflows/reusable.yml@main
     with:
       branch: main
