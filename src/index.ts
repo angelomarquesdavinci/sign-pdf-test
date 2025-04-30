@@ -1,6 +1,7 @@
 import { pdflibAddPlaceholder } from "@signpdf/placeholder-pdf-lib";
 import { P12Signer } from "@signpdf/signer-p12";
 import signpdf from "@signpdf/signpdf";
+import { text } from "body-parser";
 import * as fsPromises from "fs/promises";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { PdfDigitalSigner, SignerSettings } from "sign-pdf-lib";
@@ -26,15 +27,25 @@ export function getSignFormattedDate() {
   return `${formattedDate} ${formattedTime} ${formattedOffset}`;
 }
 
-const signTextProperties = {
+const signTextProperties: {
+  [key: string]: { x: number; y: number; width: number; pageIndex?: number };
+} = {
   curitiba: { x: 610, y: 455, width: 180 },
   default: { x: 200, y: 580, width: 200 },
   "foz-do-iguaçu": { x: 330, y: 675, width: 180 },
   "francisco-beltrao": { x: 620, y: 310, width: 180 },
+  "francisco-beltrao-pgrss": { x: 200, y: 660, width: 180 },
   londrina: { x: 315, y: 720, width: 180 },
   "marechal-candido-rondon": { x: 340, y: 725, width: 180 },
   "rio-negro": { x: 330, y: 680, width: 180 },
   "sao-jose-dos-pinhais": { x: 330, y: 715, width: 180 },
+  "irati-pgrss": { x: 270, y: 475, width: 180 },
+  "ponta-grossa-pgrss": { x: 370, y: 620, width: 180 },
+  "guarapuava-pgrss": { x: 340, y: 685, width: 180 },
+  "default-pgrss": { x: 210, y: 675, width: 180 },
+  "campo-largo": { x: 290, y: 385, width: 180 },
+  ampere: { x: 115, y: 570, width: 180, pageIndex: -2 },
+  "state-sc": { x: 210, y: 600, width: 180 },
 };
 
 async function verifyPdfSignatures(
@@ -61,12 +72,16 @@ async function drawSignText(
   pdfDoc: PDFDocument,
   template: keyof typeof signTextProperties
 ) {
+  const textProperties = signTextProperties[template];
+  const pageIndexReference = textProperties.pageIndex ?? -1;
+
   const pageIndex =
-    template === "francisco-beltrao" ? 2 : pdfDoc.getPageCount() - 1;
+    template === "francisco-beltrao"
+      ? 2
+      : pdfDoc.getPageCount() + pageIndexReference;
   const page = pdfDoc.getPage(pageIndex);
   const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  const textProperties = signTextProperties[template];
   const firstTextWidth = 0.53 * textProperties.width;
 
   page.drawText("PEDRO AMERICO NORCIO DUARTE:06109641944", {
@@ -104,7 +119,7 @@ async function drawSignText(
 async function work() {
   // contributing.pdf is the file that is going to be signed
   // SOURCE PDF FILE
-  const pdfBuffer = await fsPromises.readFile(`curitiba-template.pdf`);
+  const pdfBuffer = await fsPromises.readFile(`document-filled.pdf`);
   // certificate.p12 is the certificate that is going to be used to sign
   // CERTIFICATE FILE
   const certificateBuffer = await fsPromises.readFile(`certificate.p12`);
@@ -112,7 +127,7 @@ async function work() {
 
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  const { page, widgetRect } = await drawSignText(pdfDoc, "curitiba");
+  const { page, widgetRect } = await drawSignText(pdfDoc, "state-sc");
 
   // The PDF needs to have a placeholder for a signature to be signed.
   pdflibAddPlaceholder({
@@ -143,5 +158,4 @@ async function work() {
   const targetPath = `${__dirname}/../signed-pgrs.pdf`;
   await fsPromises.writeFile(targetPath, signedPdf);
 }
-
 work();
